@@ -1,10 +1,8 @@
 from __future__ import print_function
 import sys
-from pyspark.sql.types import *
 from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 from pyspark.sql.functions import lit
-from pyspark import SparkContext
 from graphframes import GraphFrame
 from pyspark.sql import SparkSession
 
@@ -22,13 +20,6 @@ if __name__ == "__main__":
         .getOrCreate()
     spark.sparkContext.setLogLevel('WARN')
 
-    #s3_bucket = "s3n://qizhang1-insight-project/"
-    #dir = 'testData/'
-    #folder_dir = 'checkpoint'
-    #filename = 'transactions_1000k.dat'
-    #transaction_filename = s3_bucket + dir + filename
-    #checkpoint_folder_dir = s3_bucket + folder_dir
-
     transaction_filename = sys.argv[1]
     checkpoint_folder_dir = sys.argv[2]
     group_size_limit = sys.argv[3]
@@ -45,9 +36,10 @@ if __name__ == "__main__":
         return node
 
     fields = ['cell', 'ipv4', 'en0', 'credit_card']
+
     ## df.withColumn('cell')
     # generate the
-    node = _clean_table(df, fields)
+    nodes = _clean_table(df, fields)
 
     # rename the dataframe as new names with mark_number (eg: "mark_1")
     # filter the fields that only has the unique values
@@ -68,7 +60,7 @@ if __name__ == "__main__":
         df = df.filter(~(True & df["mark_" + str(i)] for i in range(len(fields))))
 
         # drop the aux columns
-        for id, field in range(count):
+        for id, field in enumerate(fields):
             label = "mark_" + str(id)
             df = df.drop(label)
         return df
@@ -92,14 +84,7 @@ if __name__ == "__main__":
     g  = _build_graph(nodes, df)
 
 
-    #
-    #df = df.withColumn("mark_1", (F.count("cell").over(Window.partitionBy("cell")) == 1))
-    #df = df.withColumn("mark_2", (F.count("ipv4").over(Window.partitionBy("ipv4")) == 1))
-    #df = df.withColumn("mark_3", (F.count("en0").over(Window.partitionBy("en0")) == 1))
-    #df = df.filter(~(df["mark_1"] & df["mark_2"] & df["mark_3"]))
-    #df = df.drop("mark_1").drop("mark_2").drop("mark_3")
-
-
+    # rename the columns
     df1 = df.selectExpr("id as id1", "order as order1", "cell as cell1", "ipv4 as ipv41", "en0 as en01")
     df2 = df.selectExpr("id as id2", "order as order2", "cell as cell2", "ipv4 as ipv42", "en0 as en02")
 
@@ -112,8 +97,6 @@ if __name__ == "__main__":
     df3 = df3.drop('cell1').drop('ipv41').drop('en01')
 
     # build the edge relationship
-
-
     edges = df3.withColumn('relationship', lit(1))
 
     # build the edge information dataframe with header "src" and "dst"
@@ -139,7 +122,5 @@ if __name__ == "__main__":
 
     df_final = df[df["id"].isin(detected_list)]
 
-    if df_final.count() > 0:
-        df_final.write.csv(output_filename)
 
     spark.stop()
