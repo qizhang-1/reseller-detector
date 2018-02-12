@@ -14,6 +14,5 @@ Any 2 transaction ids are compared to check if shared information is used when t
 
 ## Data Pipeline
 The data pipline is quite straightforward and the figure is self explanatory.    Transaction data store in csv files are piped into Spark nad GraphX for computing the connected components of the graph in the Undirected graph.  Detected user ids are stored in a relational database.
-![Image of pipeline](/images/pipeline.png)]
-(https://github.com/qizhang-1/reseller-detector/blob/master/pipeline.png)
+![Image of pipeline](/images/pipeline.png)
 
